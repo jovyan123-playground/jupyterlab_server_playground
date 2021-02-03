@@ -53,6 +53,12 @@ jobs:
         # See `setup.cfg` for full test options
         run: |
           pytest
+          # Make sure we can install and test a tarball
+          pip uninstall -y jupyterlab_server
+          python setup.py sdist
+          cd dist
+          pip install *.tar.gz
+          pytest --pyargs jupyterlab_server
       - name: Upload coverage
         run: |
           codecov
