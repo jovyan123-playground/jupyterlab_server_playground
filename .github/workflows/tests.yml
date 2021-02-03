@@ -46,13 +46,14 @@ jobs:
         # See `setup.cfg` for full test options
         run: |
           pytest
-          # Make sure we can install and test a tarball
-          pip uninstall -y jupyterlab_server
-          python setup.py sdist
-          pushd dist
-          pip install *.tar.gz
-          pytest --pyargs jupyterlab_server
-          popd
       - name: Upload coverage
         run: |
           codecov
+      - name: Install and Test SDist
+        if: ${{ runner.os != 'Windows' }}
+        run: |
+          pip uninstall -y jupyterlab_server
+          python setup.py sdist
+          cd dist
+          pip install *.tar.gz
+          pytest --pyargs jupyterlab_server
