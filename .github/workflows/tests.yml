@@ -49,9 +49,10 @@ jobs:
           # Make sure we can install and test a tarball
           pip uninstall -y jupyterlab_server
           python setup.py sdist
-          cd dist
+          pushd dist
           pip install *.tar.gz
           pytest --pyargs jupyterlab_server
+          popd
       - name: Upload coverage
         run: |
           codecov
