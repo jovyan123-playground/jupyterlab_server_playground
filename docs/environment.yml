@@ -6,6 +6,8 @@ dependencies:
 - python=3.8
 - sphinx>=1.8
 - sphinx-copybutton
-- sphinx_rtd_theme
+- pydata_sphinx_theme
 - pip
 - myst-parser
+pip:
+  - autodoc-traits

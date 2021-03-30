@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to jupyterlab_server's documentation!
+Welcome to JupyterLab Server's documentation!
 =============================================
 
 .. toctree::
@@ -11,6 +11,7 @@ Welcome to jupyterlab_server's documentation!
    :caption: Contents:
 
    changelog
+   api/index
 
 
 Indices and tables
