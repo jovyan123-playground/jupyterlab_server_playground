@@ -8,6 +8,6 @@ dependencies:
 - sphinx-copybutton
 - pip
 - myst-parser
-pip:
-  - autodoc_traits
+- pip:
+  - autodoc-traits
   - pydata_sphinx_theme
