@@ -1,0 +1,11 @@
+
+name: jupyterlab_server_documentation
+channels:
+  - conda-forge
+dependencies:
+- python=3.8
+- sphinx>=1.8
+- sphinx-copybutton
+- sphinx_rtd_theme
+- pip
+- myst-parser
