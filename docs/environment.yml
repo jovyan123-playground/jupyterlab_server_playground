@@ -9,5 +9,5 @@ dependencies:
 - pip
 - myst-parser
 pip:
-  - autodoc-traits
+  - autodoc_traits
   - pydata_sphinx_theme
