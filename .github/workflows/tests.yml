@@ -77,6 +77,7 @@ jobs:
           pushd docs
           conda env create -f environment.yml
           conda activate jupyterlab_server_documentation
+          pip install ..
           make html
           conda deactivate
           popd
