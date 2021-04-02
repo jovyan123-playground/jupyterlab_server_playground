@@ -6,21 +6,27 @@ import json
 import json5
 import tornado
 
-from ruamel.yaml import YAML
 from strict_rfc3339 import rfc3339_to_timestamp
 
 from .utils import expected_http_error
 from .utils import maybe_patch_ioloop, big_unicode_string
 
+
 from http.cookies import SimpleCookie
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse, urljoin
 
 from openapi_core.validation.request.datatypes import (
     RequestParameters, OpenAPIRequest,
 )
+from openapi_core import create_spec
+from openapi_core.validation.request.validators import RequestValidator
+from openapi_core.validation.response.validators import ResponseValidator
+from ruamel.yaml import YAML
 
 
 def wrap_request(request):
+    """Wrap a tornado request as an open api request"""
     # Extract cookie dict from cookie header
     cookie = SimpleCookie()
     cookie.load(request.headers.get('Set-Cookie', ''))
@@ -35,7 +41,7 @@ def wrap_request(request):
     # gets deduced by path finder against spec
     path = {}
 
-    # Order matters because all python requests issued from a session
+    # Order matters because all tornado requests
     # include Accept */* which does not necessarily match the content type
     mimetype = request.headers.get('Content-Type') or \
         request.headers.get('Accept')
@@ -57,22 +63,17 @@ def wrap_request(request):
 
 
 def wrap_response(response):
+    """Wrap a tornado response as an open api response"""
     mimetype = response.headers.get('Content-Type')
     return OpenAPIResponse(
         data=response.body,
-        status_code=response.cod,
+        status_code=response.code,
         mimetype=mimetype,
     )
 
 
-
-async def test_get_settings(jp_fetch, labserverapp):
-    id = '@jupyterlab/apputils-extension:themes'
-    r = await jp_fetch('lab', 'api', 'settings', id)
-    from openapi_core import create_spec
-    from openapi_core.validation.request.validators import RequestValidator
-    from openapi_core.validation.response.validators import ResponseValidator
-    from pathlib import Path
+def validate_request(request):
+    """Validate an API request"""
     path = (Path(__file__) / '../../../docs/rest-api.yml').resolve()
     yaml = YAML(typ='safe')
     spec_dict = yaml.load(path.read_text(encoding='utf-8'))
@@ -89,6 +90,11 @@ async def test_get_settings(jp_fetch, labserverapp):
     result = validator.validate(request, response)
     result.raise_for_errors()
 
+
+async def test_get_settings(jp_fetch, labserverapp):
+    id = '@jupyterlab/apputils-extension:themes'
+    r = await jp_fetch('lab', 'api', 'settings', id)
+    validate_request(r)
     assert r.code == 200
     res = r.body.decode()
     data = json.loads(res)
@@ -102,6 +108,7 @@ async def test_get_settings(jp_fetch, labserverapp):
 async def test_get_federated(jp_fetch, labserverapp):
     id = '@jupyterlab/apputils-extension-federated:themes'
     r = await jp_fetch('lab', 'api', 'settings', id)
+    validate_request(r)
     assert r.code == 200
     res = r.body.decode()
     assert 'raw' in res
@@ -124,6 +131,7 @@ async def test_listing(jp_fetch, labserverapp):
     ]
     versions = ['N/A', 'N/A', 'test-version']
     r = await jp_fetch('lab', 'api', 'settings')
+    validate_request(r)
     assert r.code == 200
     res = r.body.decode()
     response = json.loads(res)
@@ -144,11 +152,12 @@ async def test_patch(jp_fetch, labserverapp):
     r = await jp_fetch('lab', 'api', 'settings', id,
         method='PUT',
         body=json.dumps(dict(raw=json5.dumps(dict()))))
-    assert r.code == 204
+    validate_request(r)
 
     r = await jp_fetch('lab', 'api', 'settings', id,
         method='GET',
         )
+    validate_request(r)
     data = json.loads(r.body.decode())
     first_created = rfc3339_to_timestamp(data['created'])
     first_modified = rfc3339_to_timestamp(data['last_modified'])
@@ -157,11 +166,12 @@ async def test_patch(jp_fetch, labserverapp):
         method='PUT',
         body=json.dumps(dict(raw=json5.dumps(dict())))
         )
-    assert r.code == 204
+    validate_request(r)
 
     r = await jp_fetch('lab', 'api', 'settings', id,
         method='GET',
         )
+    validate_request(r)
     data = json.loads(r.body.decode())
     second_created = rfc3339_to_timestamp(data['created'])
     second_modified = rfc3339_to_timestamp(data['last_modified'])
@@ -172,6 +182,7 @@ async def test_patch(jp_fetch, labserverapp):
     r = await jp_fetch('lab', 'api', 'settings', '',
         method='GET',
         )
+    validate_request(r)
     data = json.loads(r.body.decode())
     listing = data['settings']
     list_data = [item for item in listing if item['id'] == id][0]
@@ -189,11 +200,12 @@ async def test_patch_unicode(jp_fetch, labserverapp):
         method='PUT',
         body=json.dumps(payload)
         )
-    assert r.code == 204
+    validate_request(r)
 
     r = await jp_fetch('lab', 'api', 'settings', id,
         method='GET',
         )
+    validate_request(r)
     data = json.loads(r.body.decode())
     assert data["settings"]["comment"] == big_unicode_string[::-1]
 
