@@ -257,6 +257,7 @@ components:
           type: object
         warning:
           type: string
+          nullable: true
         last_modified:
           type: string
           nullable: true

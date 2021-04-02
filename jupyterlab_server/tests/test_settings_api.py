@@ -38,25 +38,24 @@ def wrap_request(request, spec):
     # extract the path
     o = urlparse(request.url)
 
+    # extract the best matching url
+    # work around lack of support for path parameters which can contain slashes
+    # https://github.com/OAI/OpenAPI-Specification/issues/892
     url = None
-    print(o.path)
     for path in spec.paths:
         if url:
             continue
         has_arg = '{' in path
         if has_arg:
             path = path[:path.index('{')]
-        print(path)
         if path in o.path:
             u = o.path[o.path.index(path):]
             if not has_arg and len(u) == len(path):
                 url = u
             if has_arg:
                 url = u[:len(path)] + r'foo/'
-
-    # TODO: hack the url to escape slashes so it matches
-    # pass in the spec -> look for a match, expanding {name} to allow slashes
-    # that way it works no matter what the api url is
+    if url is None:
+        raise ValueError(f'Could not find matching pattern for {o.path}')
 
     # gets deduced by path finder against spec
     path = {}
@@ -64,7 +63,7 @@ def wrap_request(request, spec):
     # Order matters because all tornado requests
     # include Accept */* which does not necessarily match the content type
     mimetype = request.headers.get('Content-Type') or \
-        request.headers.get('Accept')
+        request.headers.get('Accept') or 'application/json'
 
     parameters = RequestParameters(
         query=parse_qs(o.query),
@@ -84,7 +83,7 @@ def wrap_request(request, spec):
 
 def wrap_response(response):
     """Wrap a tornado response as an open api response"""
-    mimetype = response.headers.get('Content-Type')
+    mimetype = response.headers.get('Content-Type') or 'application/json'
     return OpenAPIResponse(
         data=response.body,
         status_code=response.code,
@@ -116,7 +115,6 @@ async def test_get_settings(jp_fetch, labserverapp):
     id = '@jupyterlab/apputils-extension:themes'
     r = await jp_fetch('lab', 'api', 'settings', id)
     validate_request(r)
-    assert r.code == 200
     res = r.body.decode()
     data = json.loads(res)
     assert data['id'] == id
@@ -130,7 +128,6 @@ async def test_get_federated(jp_fetch, labserverapp):
     id = '@jupyterlab/apputils-extension-federated:themes'
     r = await jp_fetch('lab', 'api', 'settings', id)
     validate_request(r)
-    assert r.code == 200
     res = r.body.decode()
     assert 'raw' in res
 
@@ -151,9 +148,8 @@ async def test_listing(jp_fetch, labserverapp):
         '@jupyterlab/unicode-extension:plugin'
     ]
     versions = ['N/A', 'N/A', 'test-version']
-    r = await jp_fetch('lab', 'api', 'settings')
+    r = await jp_fetch('lab', 'api', 'settings/')
     validate_request(r)
-    assert r.code == 200
     res = r.body.decode()
     response = json.loads(res)
     response_ids = [item['id'] for item in response['settings']]
@@ -200,7 +196,7 @@ async def test_patch(jp_fetch, labserverapp):
     assert first_created <= second_created
     assert first_modified < second_modified
 
-    r = await jp_fetch('lab', 'api', 'settings', '',
+    r = await jp_fetch('lab', 'api', 'settings/',
         method='GET',
         )
     validate_request(r)
