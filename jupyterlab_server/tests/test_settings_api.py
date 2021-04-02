@@ -77,7 +77,6 @@ def validate_request(response):
     path = (Path(__file__) / '../../../docs/rest-api.yml').resolve()
     yaml = YAML(typ='safe')
     spec_dict = yaml.load(path.read_text(encoding='utf-8'))
-    # TODO: inject a server into the spec so the urls match up
     spec = create_spec(spec_dict)
 
     validator = RequestValidator(spec)
