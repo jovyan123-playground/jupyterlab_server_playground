@@ -59,7 +59,7 @@ paths:
                     items:
                       $ref: "#/components/schemas/SettingsEntry"
 
-  /lab/api/settings/{schema_name}/:
+  /lab/api/settings/{schema_name}:
     parameters:
       - name: schema_name
         description: Schema Name
@@ -201,7 +201,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Workspace"
-
     put:
       summary: Override the workspace data for a given name
       description: |
