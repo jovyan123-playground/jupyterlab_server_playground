@@ -48,6 +48,7 @@ if 'setuptools' in sys.modules:
             'jupyter_server[test]',
             'pytest-console-scripts',
             'strict-rfc3339',
+            'ruamel.yaml',
             'wheel',
         ],
     }

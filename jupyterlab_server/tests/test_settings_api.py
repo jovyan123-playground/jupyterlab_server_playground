@@ -6,15 +6,89 @@ import json
 import json5
 import tornado
 
+from ruamel.yaml import YAML
 from strict_rfc3339 import rfc3339_to_timestamp
 
 from .utils import expected_http_error
 from .utils import maybe_patch_ioloop, big_unicode_string
 
+from http.cookies import SimpleCookie
+from urllib.parse import parse_qs, urlparse, urljoin
 
-async def test_get(jp_fetch, labserverapp):
+from openapi_core.validation.request.datatypes import (
+    RequestParameters, OpenAPIRequest,
+)
+
+
+def wrap_request(request):
+    # Extract cookie dict from cookie header
+    cookie = SimpleCookie()
+    cookie.load(request.headers.get('Set-Cookie', ''))
+    cookies = {}
+    for key, morsel in cookie.items():
+        cookies[key] = morsel.value
+
+    # extract the URL without query parameters
+    o = urlparse(request.url)
+    url = urljoin(request.url, o.path)
+
+    # gets deduced by path finder against spec
+    path = {}
+
+    # Order matters because all python requests issued from a session
+    # include Accept */* which does not necessarily match the content type
+    mimetype = request.headers.get('Content-Type') or \
+        request.headers.get('Accept')
+
+    parameters = RequestParameters(
+        query=parse_qs(o.query),
+        header=dict(request.headers),
+        cookie=cookies,
+        path=path,
+    )
+
+    return OpenAPIRequest(
+        full_url_pattern=url,
+        method=request.method,
+        parameters=parameters,
+        body=request.body,
+        mimetype=mimetype,
+    )
+
+
+def wrap_response(response):
+    mimetype = response.headers.get('Content-Type')
+    return OpenAPIResponse(
+        data=response.body,
+        status_code=response.cod,
+        mimetype=mimetype,
+    )
+
+
+
+async def test_get_settings(jp_fetch, labserverapp):
     id = '@jupyterlab/apputils-extension:themes'
     r = await jp_fetch('lab', 'api', 'settings', id)
+    from openapi_core import create_spec
+    from openapi_core.validation.request.validators import RequestValidator
+    from openapi_core.validation.response.validators import ResponseValidator
+    from pathlib import Path
+    path = (Path(__file__) / '../../../docs/rest-api.yml').resolve()
+    yaml = YAML(typ='safe')
+    spec_dict = yaml.load(path.read_text(encoding='utf-8'))
+    # TODO: inject a server into the spec so the urls match up
+    spec = create_spec(spec_dict)
+
+    validator = RequestValidator(spec)
+    request = wrap_request(r.request)
+    result = validator.validate(request)
+    result.raise_for_errors()
+
+    validator = ResponseValidator(spec)
+    response = wrap_response(r)
+    result = validator.validate(request, response)
+    result.raise_for_errors()
+
     assert r.code == 200
     res = r.body.decode()
     data = json.loads(res)
