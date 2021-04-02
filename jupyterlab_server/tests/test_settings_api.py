@@ -25,7 +25,7 @@ from openapi_core.validation.response.validators import ResponseValidator
 from ruamel.yaml import YAML
 
 
-def wrap_request(request):
+def wrap_request(request, api_url='/lab/api'):
     """Wrap a tornado request as an open api request"""
     # Extract cookie dict from cookie header
     cookie = SimpleCookie()
@@ -34,9 +34,9 @@ def wrap_request(request):
     for key, morsel in cookie.items():
         cookies[key] = morsel.value
 
-    # extract the URL without query parameters
+    # extract the path
     o = urlparse(request.url)
-    url = urljoin(request.url, o.path)
+    url = o.path[o.path.index(api_url):]
 
     # gets deduced by path finder against spec
     path = {}
@@ -72,7 +72,7 @@ def wrap_response(response):
     )
 
 
-def validate_request(request):
+def validate_request(response):
     """Validate an API request"""
     path = (Path(__file__) / '../../../docs/rest-api.yml').resolve()
     yaml = YAML(typ='safe')
@@ -81,12 +81,12 @@ def validate_request(request):
     spec = create_spec(spec_dict)
 
     validator = RequestValidator(spec)
-    request = wrap_request(r.request)
+    request = wrap_request(response.request)
     result = validator.validate(request)
     result.raise_for_errors()
 
     validator = ResponseValidator(spec)
-    response = wrap_response(r)
+    response = wrap_response(response)
     result = validator.validate(request, response)
     result.raise_for_errors()
 
