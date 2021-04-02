@@ -52,8 +52,9 @@ def wrap_request(request, spec):
             u = o.path[o.path.index(path):]
             if not has_arg and len(u) == len(path):
                 url = u
-            if has_arg:
+            if has_arg and not u.endswith('/'):
                 url = u[:len(path)] + r'foo'
+
     if url is None:
         raise ValueError(f'Could not find matching pattern for {o.path}')
 
