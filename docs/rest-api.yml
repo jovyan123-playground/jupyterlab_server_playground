@@ -60,17 +60,18 @@ paths:
                       $ref: "#/components/schemas/SettingsEntry"
 
   /lab/api/settings/{schema_name}:
+    parameters:
+      - name: schema_name
+        description: Schema Name
+        in: path
+        required: true
+        schema:
+          type: string
     get:
       summary: Get the settings data for a given schema
       description: |
         Gets the settings data for a given schema
-      parameters:
-        - name: schema_name
-          description: Schema Name
-          in: path
-          required: true
-          schema:
-            type: string
+
       responses:
         "200":
           description: The Settings Data
@@ -82,13 +83,6 @@ paths:
       summary: Override the settings data for a given schema
       description: |
         Overrides the settings data for a given schema
-      parameters:
-        - name: schema_name
-          description: Schema Name
-          in: path
-          required: true
-          schema:
-            type: string
       requestBody:
         required: true
         description: raw settings data
@@ -104,17 +98,17 @@ paths:
           description: The setting has been updated
 
   /lab/api/themes/{theme_file}:
+    parameters:
+      - name: theme_file
+        description: Theme file path
+        in: path
+        required: true
+        schema:
+          type: string
     get:
       summary: Get the settings data for a given schema
       description: |
         Gets the settings data for a given schema
-      parameters:
-        - name: theme_file
-          description: Theme file path
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         "200":
           description: The Theme File
@@ -140,17 +134,17 @@ paths:
                     type: string
 
   /lab/api/translations/{locale}:
+    parameters:
+      - name: locale
+        description: Locale name
+        in: path
+        required: true
+        schema:
+          type: string
     get:
       summary: Get the translation data for locale
       description: |
         Gets the translation data for a given locale
-      parameters:
-        - name: locale
-          description: Locale name
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         "200":
           description: The Local Data
@@ -190,17 +184,17 @@ paths:
                             $ref: "#/components/schemas/Workspace"
 
   /lab/api/workspaces/{space_name}:
+    parameters:
+      - name: space_name
+        description: Workspace name
+        in: path
+        required: true
+        schema:
+          type: string
     get:
       summary: Get the workspace data for name
       description: |
         Gets the workspace data for a given workspace name
-      parameters:
-        - name: space_name
-          description: Workspace name
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         "200":
           description: The Workspace Data
@@ -213,13 +207,6 @@ paths:
       summary: Override the workspace data for a given name
       description: |
         Overrides the workspace data for a given workspace name
-      parameters:
-        - name: space_name
-          description: Workspace Name
-          in: path
-          required: true
-          schema:
-            type: string
       requestBody:
         required: true
         description: raw workspace data
@@ -235,13 +222,6 @@ paths:
       summary: Delete the workspace data for a given name
       description: |
         Deletes the workspace data for a given workspace name
-      parameters:
-        - name: space_name
-          description: Workspace Name
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         "204":
           description: The workspace has been deleted
