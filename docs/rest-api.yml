@@ -59,7 +59,7 @@ paths:
                     items:
                       $ref: "#/components/schemas/SettingsEntry"
 
-  /lab/api/settings/{schema_name}:
+  /lab/api/settings/{schema_name}/:
     parameters:
       - name: schema_name
         description: Schema Name
@@ -71,7 +71,6 @@ paths:
       summary: Get the settings data for a given schema
       description: |
         Gets the settings data for a given schema
-
       responses:
         "200":
           description: The Settings Data
@@ -260,8 +259,10 @@ components:
           type: string
         last_modified:
           type: string
+          nullable: true
         created:
           type: string
+          nullable: true
     TranslationEntry:
       type: object
       properties:

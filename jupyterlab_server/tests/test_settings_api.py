@@ -17,15 +17,16 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse, urljoin
 
 from openapi_core.validation.request.datatypes import (
-    RequestParameters, OpenAPIRequest,
+    RequestParameters, OpenAPIRequest
 )
+from openapi_core.validation.response.datatypes import OpenAPIResponse
 from openapi_core import create_spec
 from openapi_core.validation.request.validators import RequestValidator
 from openapi_core.validation.response.validators import ResponseValidator
 from ruamel.yaml import YAML
 
 
-def wrap_request(request, api_url='/lab/api'):
+def wrap_request(request, spec):
     """Wrap a tornado request as an open api request"""
     # Extract cookie dict from cookie header
     cookie = SimpleCookie()
@@ -36,7 +37,26 @@ def wrap_request(request, api_url='/lab/api'):
 
     # extract the path
     o = urlparse(request.url)
-    url = o.path[o.path.index(api_url):]
+
+    url = None
+    print(o.path)
+    for path in spec.paths:
+        if url:
+            continue
+        has_arg = '{' in path
+        if has_arg:
+            path = path[:path.index('{')]
+        print(path)
+        if path in o.path:
+            u = o.path[o.path.index(path):]
+            if not has_arg and len(u) == len(path):
+                url = u
+            if has_arg:
+                url = u[:len(path)] + r'foo/'
+
+    # TODO: hack the url to escape slashes so it matches
+    # pass in the spec -> look for a match, expanding {name} to allow slashes
+    # that way it works no matter what the api url is
 
     # gets deduced by path finder against spec
     path = {}
@@ -55,7 +75,7 @@ def wrap_request(request, api_url='/lab/api'):
 
     return OpenAPIRequest(
         full_url_pattern=url,
-        method=request.method,
+        method=request.method.lower(),
         parameters=parameters,
         body=request.body,
         mimetype=mimetype,
@@ -80,13 +100,15 @@ def validate_request(response):
     spec = create_spec(spec_dict)
 
     validator = RequestValidator(spec)
-    request = wrap_request(response.request)
+    request = wrap_request(response.request, spec)
     result = validator.validate(request)
+    print(result.errors)
     result.raise_for_errors()
 
     validator = ResponseValidator(spec)
     response = wrap_response(response)
     result = validator.validate(request, response)
+    print(result.errors)
     result.raise_for_errors()
 
 
