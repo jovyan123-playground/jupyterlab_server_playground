@@ -7,7 +7,7 @@ The same JupyterLab Server API spec, as found here, is available in an interacti
 The `OpenAPI Initiative`_ (fka Swagger™) is a project used to describe
 and document RESTful APIs.
 
-.. openapi:: ../../rest-api.yml
+.. openapi:: ../../../jupyterlab_server/rest-api.yml
 
 
 .. _OpenAPI Initiative: https://www.openapis.org/
