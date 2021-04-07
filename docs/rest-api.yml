@@ -8,7 +8,7 @@ info:
     name: BSD-3-Clause
 
 paths:
-  /lab/api/listings/@jupyterlab/extensionmanager-extension/listings.json:
+  /lab/api/listings/%40jupyterlab/extensionmanager-extension/listings.json:
     get:
       summary: Get Extension Listings Specs
       description: |
@@ -105,9 +105,9 @@ paths:
         schema:
           type: string
     get:
-      summary: Get the settings data for a given schema
+      summary: Get a static theme file
       description: |
-        Gets the settings data for a given schema
+        Gets the static theme file at a given path
       responses:
         "200":
           description: The Theme File
