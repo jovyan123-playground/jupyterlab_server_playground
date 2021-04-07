@@ -1,19 +1,14 @@
 # coding: utf-8
-"""JupyterLab Server"""
+"""JupyterLab Server Application"""
 
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-import os, jinja2
-from traitlets import Unicode
-from jinja2 import Environment, FileSystemLoader
-from traitlets import Bool, Unicode, default, observe
 from jupyter_server.extension.application import ExtensionApp, ExtensionAppJinjaMixin
-from traitlets import Unicode, Integer, Dict
+from traitlets import Dict, Integer, Unicode, observe
 
 from ._version import __version__
-from .server import url_path_join as ujoin
-from .handlers import add_handlers, LabConfig
+from .handlers import LabConfig, add_handlers
 
 
 class LabServerApp(ExtensionAppJinjaMixin, LabConfig, ExtensionApp):
@@ -21,6 +16,7 @@ class LabServerApp(ExtensionAppJinjaMixin, LabConfig, ExtensionApp):
     name = "jupyterlab_server"
     extension_url = "/lab"
     app_name = "JupyterLab Server Application"
+    file_url_prefix = "/lab/tree"
 
     @property
     def app_namespace(self):
@@ -47,7 +43,7 @@ class LabServerApp(ExtensionAppJinjaMixin, LabConfig, ExtensionApp):
         """)
 
     whitelist_uris = Unicode('', config=True,
-        help="A list of comma-separated URIs to get the whitelist")
+        help="Deprecated, use `LabServerApp.allowed_extensions_uris`")
 
     allowed_extensions_uris = Unicode('', config=True,
         help="""
@@ -69,9 +65,9 @@ class LabServerApp(ExtensionAppJinjaMixin, LabConfig, ExtensionApp):
         "whitelist_uris": ("allowed_extensions_uris", "1.2"),
     }
 
-    # Method copied from 
+    # Method copied from
     # https://github.com/jupyterhub/jupyterhub/blob/d1a85e53dccfc7b1dd81b0c1985d158cc6b61820/jupyterhub/auth.py#L143-L161
-    @observe(*list(_deprecated_aliases))    
+    @observe(*list(_deprecated_aliases))
     def _deprecated_trait(self, change):
         """observer for deprecated traits"""
         old_attr = change.name

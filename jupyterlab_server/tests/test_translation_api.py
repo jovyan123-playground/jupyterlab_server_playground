@@ -14,14 +14,18 @@ from ..translation_utils import (_get_installed_language_pack_locales,
                                  get_installed_packages_locale,
                                  get_language_pack, get_language_packs,
                                  is_valid_locale, merge_locale_data,
-                                 run_process_and_parse)
+                                 run_process_and_parse, translator)
 
 from .utils import maybe_patch_ioloop
+from .utils import validate_request
 
 maybe_patch_ioloop()
 
 # Constants
 HERE = os.path.abspath(os.path.dirname(__file__))
+
+if not os.path.exists(os.path.join(HERE, 'translations')):
+    pytest.skip("skipping translation tests", allow_module_level=True)
 
 
 def setup_module(module):
@@ -65,16 +69,18 @@ def before_after_test(schemas_dir, user_settings_dir, labserverapp):
 
     # Code that will run after your test.
     # N/A
-    
 
-async def test_get(fetch):
-    r = await fetch("lab", "api", "translations", "")
+
+async def test_get(jp_fetch):
+    r = await jp_fetch("lab", "api", "translations/")
+    validate_request(r)
     data = json.loads(r.body.decode())["data"]
     assert "en" in data
 
-async def test_get_locale(fetch):
+async def test_get_locale(jp_fetch):
     locale = "es_CO"
-    r = await fetch("lab", "api", "translations", locale)
+    r = await jp_fetch("lab", "api", "translations", locale)
+    validate_request(r)
     data = json.loads(r.body.decode())["data"]
     assert "jupyterlab" in data
     assert data["jupyterlab"][""]["language"] == locale
@@ -83,22 +89,43 @@ async def test_get_locale(fetch):
     assert data["jupyterlab_some_package"][""]["version"] == "0.1.0"
     assert data["jupyterlab_some_package"][""]["language"] == locale
 
-async def test_get_locale_bad(fetch):
-    r = await fetch("lab", "api", "translations", "foo_BAR")
+async def test_get_locale_bad(jp_fetch):
+    r = await jp_fetch("lab", "api", "translations", "foo_BAR")
+    validate_request(r)
     data = json.loads(r.body.decode())["data"]
     assert data == {}
 
-async def test_get_locale_not_installed(fetch):
-    r = await fetch("lab", "api", "translations", "es_AR")
+async def test_get_locale_not_installed(jp_fetch):
+    r = await jp_fetch("lab", "api", "translations", "es_AR")
+    validate_request(r)
     result = json.loads(r.body.decode())
     assert "not installed" in result["message"]
     assert result["data"] == {}
 
-async def test_get_locale_not_valid(fetch):
-    r = await fetch("lab", "api", "translations", "foo_BAR")
+async def test_get_locale_not_valid(jp_fetch):
+    r = await jp_fetch("lab", "api", "translations", "foo_BAR")
+    validate_request(r)
     result = json.loads(r.body.decode())
     assert "not valid" in result["message"]
     assert result["data"] == {}
+
+
+# --- Backend locale
+# ------------------------------------------------------------------------
+async def test_backend_locale(jp_fetch):
+    locale = "es_CO"
+    r = await jp_fetch("lab", "api", "translations", locale)
+    trans = translator.load("jupyterlab")
+    result = trans.__("MORE ABOUT PROJECT JUPYTER")
+    assert result == "Más sobre el proyecto jupyter"
+
+
+async def test_backend_locale_extension(jp_fetch):
+    locale = "es_CO"
+    r = await jp_fetch("lab", "api", "translations", locale)
+    trans = translator.load("jupyterlab_some_package")
+    result = trans.__("BOOM")
+    assert result == "Foo bar 2"
 
 
 # --- Utils testing

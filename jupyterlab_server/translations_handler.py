@@ -6,16 +6,15 @@ Translation handler.
 """
 
 import json
-import os
 import traceback
 
 import tornado
-from tornado import gen, web
+from tornado import gen
 
+from .server import APIHandler
 from .settings_handler import get_settings
-from .translation_utils import get_language_pack, get_language_packs, is_valid_locale
+from .translation_utils import get_language_pack, get_language_packs, is_valid_locale, translator
 
-from .server import APIHandler, url_path_join
 
 SCHEMA_NAME = '@jupyterlab/translation-extension:plugin'
 
@@ -80,6 +79,10 @@ class TranslationsHandler(APIHandler):
                         message = "Language pack '{}' not installed!".format(locale)
                     else:
                         message = "Language pack '{}' not valid!".format(locale)
+                else:
+                    # only change locale if the language pack is installed and valid
+                    if is_valid_locale(locale):
+                        translator.set_locale(locale)
         except Exception:
             message = traceback.format_exc()
 
