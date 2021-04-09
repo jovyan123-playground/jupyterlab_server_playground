@@ -4,25 +4,36 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import json
+import os.path as osp
 from glob import iglob
 from itertools import chain
-import json
 from os.path import join as pjoin
-import os.path as osp
-import os
 
-from jupyter_core.paths import jupyter_path, jupyter_config_dir, SYSTEM_CONFIG_PATH
+from jupyter_core.paths import SYSTEM_CONFIG_PATH, jupyter_config_dir, jupyter_path
 from jupyter_server.services.config.manager import ConfigManager, recursive_update
 from traitlets import Bool, HasTraits, List, Unicode, default
 
 from .server import url_path_join as ujoin
-
 
 # -----------------------------------------------------------------------------
 # Module globals
 # -----------------------------------------------------------------------------
 
 DEFAULT_TEMPLATE_PATH = osp.join(osp.dirname(__file__), 'templates')
+
+
+def get_package_url(data):
+    """Get the url from the extension data
+    """
+    # homepage, repository  are optional
+    if 'homepage' in data:
+        url = data['homepage']
+    elif 'repository' in data and isinstance(data['repository'], dict):
+        url = data['repository'].get('url', '')
+    else:
+        url = ''
+    return url
 
 
 def get_federated_extensions(labextensions_path):
@@ -33,12 +44,14 @@ def get_federated_extensions(labextensions_path):
         # extensions are either top-level directories, or two-deep in @org directories
         for ext_path in chain(iglob(pjoin(ext_dir, '[!@]*', 'package.json')),
                               iglob(pjoin(ext_dir, '@*', '*', 'package.json'))):
-            with open(ext_path) as fid:
+            with open(ext_path, encoding='utf-8') as fid:
                 pkgdata = json.load(fid)
             if pkgdata['name'] not in federated_extensions:
                 data = dict(
                     name=pkgdata['name'],
                     version=pkgdata['version'],
+                    description=pkgdata.get('description', ''),
+                    url=get_package_url(pkgdata),
                     ext_dir=ext_dir,
                     ext_path=osp.dirname(ext_path),
                     is_local=False,
@@ -47,7 +60,7 @@ def get_federated_extensions(labextensions_path):
                 )
                 install_path = osp.join(osp.dirname(ext_path), 'install.json')
                 if osp.exists(install_path):
-                    with open(install_path) as fid:
+                    with open(install_path, encoding='utf-8') as fid:
                         data['install'] = json.load(fid)
                 federated_extensions[data['name']] = data
     return federated_extensions
@@ -78,7 +91,7 @@ def get_page_config(labextensions_path, app_settings_dir=None, logger=None):
     if app_settings_dir:
         app_page_config = pjoin(app_settings_dir, 'page_config.json')
         if osp.exists(app_page_config):
-            with open(old_page_config) as fid:
+            with open(app_page_config, encoding='utf-8') as fid:
                 data = json.load(fid)
 
             # Convert lists to dicts
@@ -122,10 +135,6 @@ def get_page_config(labextensions_path, app_settings_dir=None, logger=None):
         # If there is disabledExtensions metadata, consume it.
         name = ext_data['name']
 
-        # skip if the extension itself is disabled by other config
-        if page_config[disabled_key].get(name) == True:
-            continue
-
         if ext_data['jupyterlab'].get(disabled_key):
             disabled_by_extensions_all[ext_data['name']] = ext_data['jupyterlab'][disabled_key]
 
@@ -135,7 +144,7 @@ def get_page_config(labextensions_path, app_settings_dir=None, logger=None):
         app_dir = osp.dirname(app_settings_dir)
         package_data_file = pjoin(app_dir, 'static', 'package.json')
         if osp.exists(package_data_file):
-            with open(package_data_file) as fid:
+            with open(package_data_file, encoding='utf-8') as fid:
                 app_data = json.load(fid)
             all_ext_data = app_data['jupyterlab'].get('extensionMetadata', {})
             for (ext, ext_data) in all_ext_data.items():
@@ -146,6 +155,10 @@ def get_page_config(labextensions_path, app_settings_dir=None, logger=None):
 
     disabled_by_extensions = dict()
     for name in sorted(disabled_by_extensions_all):
+        # skip if the extension itself is disabled by other config
+        if page_config[disabled_key].get(name) == True:
+            continue
+
         disabled_list = disabled_by_extensions_all[name]
         for item in disabled_list:
             disabled_by_extensions[item] = True
@@ -154,14 +167,8 @@ def get_page_config(labextensions_path, app_settings_dir=None, logger=None):
     rollup_disabled.update(page_config.get(disabled_key, []))
     page_config[disabled_key] = rollup_disabled
 
-    # Needed for compatibility with JupyterLab 3.0rc11
-    page_config['disabled_labextensions'] = page_config[disabled_key]
-
     # Convert dictionaries to lists to give to the front end
     for (key, value) in page_config.items():
-        # Needed for compatibility with JupyterLab 3.0rc11
-        if key == 'disabled_labextensions':
-            continue
 
         if isinstance(value, dict):
             page_config[key] = [subkey for subkey in value if value[subkey]]
@@ -178,66 +185,66 @@ def write_page_config(page_config, level='all'):
 class LabConfig(HasTraits):
     """The lab application configuration object.
     """
-    app_name = Unicode('', help='The name of the application.')
+    app_name = Unicode('', help='The name of the application.').tag(config=True)
 
-    app_version = Unicode('', help='The version of the application.')
+    app_version = Unicode('', help='The version of the application.').tag(config=True)
 
-    app_namespace = Unicode('', help='The namespace of the application.')
+    app_namespace = Unicode('', help='The namespace of the application.').tag(config=True)
 
-    app_url = Unicode('/lab', help='The url path for the application.')
+    app_url = Unicode('/lab', help='The url path for the application.').tag(config=True)
 
-    app_settings_dir = Unicode('', help='The application settings directory.')
+    app_settings_dir = Unicode('', help='The application settings directory.').tag(config=True)
 
     extra_labextensions_path = List(Unicode(),
         help="""Extra paths to look for federated JupyterLab extensions"""
-    )
+    ).tag(config=True)
 
-    labextensions_path = List(Unicode(), help='The standard paths to look in for federated JupyterLab extensions')
+    labextensions_path = List(Unicode(), help='The standard paths to look in for federated JupyterLab extensions').tag(config=True)
 
-    templates_dir = Unicode('', help='The application templates directory.')
+    templates_dir = Unicode('', help='The application templates directory.').tag(config=True)
 
     static_dir = Unicode('',
                          help=('The optional location of local static files. '
                                'If given, a static file handler will be '
-                               'added.'))
+                               'added.')).tag(config=True)
 
 
-    labextensions_url = Unicode('', help='The url for federated JupyterLab extensions')
+    labextensions_url = Unicode('', help='The url for federated JupyterLab extensions').tag(config=True)
 
-    settings_url = Unicode(help='The url path of the settings handler.')
+    settings_url = Unicode(help='The url path of the settings handler.').tag(config=True)
 
     user_settings_dir = Unicode('',
                                 help=('The optional location of the user '
-                                      'settings directory.'))
+                                      'settings directory.')).tag(config=True)
 
     schemas_dir = Unicode('',
                           help=('The optional location of the settings '
                                 'schemas directory. If given, a handler will '
-                                'be added for settings.'))
+                                'be added for settings.')).tag(config=True)
 
-    workspaces_api_url = Unicode(help='The url path of the workspaces API.')
+    workspaces_api_url = Unicode(help='The url path of the workspaces API.').tag(config=True)
 
     workspaces_dir = Unicode('',
                              help=('The optional location of the saved '
                                    'workspaces directory. If given, a handler '
-                                   'will be added for workspaces.'))
+                                   'will be added for workspaces.')).tag(config=True)
 
-    listings_url = Unicode(help='The listings url.')
+    listings_url = Unicode(help='The listings url.').tag(config=True)
 
-    themes_url = Unicode(help='The theme url.')
+    themes_url = Unicode(help='The theme url.').tag(config=True)
 
     themes_dir = Unicode('',
                          help=('The optional location of the themes '
                                'directory. If given, a handler will be added '
-                               'for themes.'))
+                               'for themes.')).tag(config=True)
 
-    translations_api_url = Unicode(help='The url path of the translations handler.')
+    translations_api_url = Unicode(help='The url path of the translations handler.').tag(config=True)
 
-    tree_url = Unicode(help='The url path of the tree handler.')
+    tree_url = Unicode(help='The url path of the tree handler.').tag(config=True)
 
     cache_files = Bool(True,
                        help=('Whether to cache files on the server. '
-                             'This should be `True` except in dev mode.'))
+                             'This should be `True` except in dev mode.')).tag(config=True)
 
     @default('template_dir')
     def _default_template_dir(self):
