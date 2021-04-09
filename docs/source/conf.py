@@ -77,15 +77,6 @@ html_theme = "pydata_sphinx_theme"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-# Output for github to be used in links
-html_context = {
-    "display_github": True,  # Integrate GitHub
-    "github_user": "jupyterlab",  # Username
-    "github_repo": "jupyterlab_server",  # Repo name
-    "github_version": "master",  # Version
-    "conf_py_path": "/docs/source/",  # Path in the checkout to the docs root
-}
-
 
 def setup(app):
     dest = osp.join(HERE, 'changelog.md')
