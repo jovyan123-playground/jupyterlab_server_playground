@@ -12,5 +12,5 @@ JupyterLab Server API Reference:
     app
     config
     handlers
-    listings_handler
+    process
     rest
