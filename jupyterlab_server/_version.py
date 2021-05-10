@@ -1,3 +1,9 @@
+"""
+store the current version info of the server.
+
+"""
+import re
+
 __version__ = '2.5.0'
 
 # Build up version_info tuple for backwards compatibility
